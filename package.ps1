@@ -3,7 +3,8 @@
 
 param(
 	$ModuleName = 'mkdir',
-	$CompanyName = 'rhubarb-geek-nz'
+	$CompanyName = 'rhubarb-geek-nz',
+	$ModuleVersion = '1.0.0'
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,19 +12,14 @@ $ProgressPreference = "SilentlyContinue"
 
 $ModuleId = "$CompanyName.$ModuleName"
 $Version = $PSVersionTable.PSVersion
-$PublishDir = $ModuleId
+$PublishDir = "$ModuleId\$ModuleVersion"
 
 trap
 {
 	throw $PSItem
 }
 
-if (-not $IsWindows)
-{
-	throw 'Must run with Windows PowerShell 7'
-}
-
-foreach ($Name in $PublishDir)
+foreach ($Name in $ModuleId)
 {
 	if (Test-Path -LiteralPath $Name)
 	{
@@ -31,22 +27,27 @@ foreach ($Name in $PublishDir)
 	} 
 }
 
+$command = Get-Command -Name 'mkdir'
+
+if ($command.CommandType -ne 'Function')
+{
+	throw "mkdir is not a function"
+}
+
 $null = New-Item -Path $PublishDir -ItemType Directory
 
-Invoke-Command -ScriptBlock {
-	'# Copyright (c) Microsoft Corporation.'
-	'# Licensed under the MIT License.'
-	'function New-Directory'
-	'{'
-	(Get-Command -Name 'mkdir').Definition
-	'}'
-	'Export-ModuleMember -Function New-Directory'
-} | Set-Content -LiteralPath "$PublishDir\$ModuleName.psm1" -Encoding utf8BOM
+'# Copyright (c) Microsoft Corporation.',
+'# Licensed under the MIT License.',
+'function New-Directory',
+'{',
+$command.Definition,
+'}',
+'Export-ModuleMember -Function New-Directory' | Set-Content -LiteralPath "$PublishDir\$ModuleName.psm1"
 
 $moduleSettings = @{
 	Path = "$ModuleId.psd1"
 	RootModule = "$ModuleName.psm1"
-	ModuleVersion = '1.0.0'
+	ModuleVersion = $ModuleVersion
 	Guid = '54ab514e-bb66-4909-a7a0-25b959429bb6'
 	Author = 'Roger Brown'
 	CompanyName = $CompanyName
@@ -63,7 +64,7 @@ try
 {
 	New-ModuleManifest @moduleSettings
 
-	Import-PowerShellDataFile -LiteralPath "$ModuleId.psd1" | Export-PowerShellDataFile | Set-Content -LiteralPath "$PublishDir\$ModuleId.psd1" -Encoding utf8BOM
+	Import-PowerShellDataFile -LiteralPath "$ModuleId.psd1" | Export-PowerShellDataFile | Set-Content -LiteralPath "$PublishDir\$ModuleId.psd1"
 }
 finally
 {
