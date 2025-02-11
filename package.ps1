@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # Copyright 2025, Roger Brown
 # Licensed under the MIT License.
 
@@ -12,14 +13,14 @@ $ProgressPreference = "SilentlyContinue"
 
 $ModuleId = "$CompanyName.$ModuleName"
 $Version = $PSVersionTable.PSVersion
-$PublishDir = "$ModuleId\$ModuleVersion"
+$PublishDir = "Modules\$ModuleId\$ModuleVersion"
 
 trap
 {
 	throw $PSItem
 }
 
-foreach ($Name in $ModuleId)
+foreach ($Name in 'Modules')
 {
 	if (Test-Path -LiteralPath $Name)
 	{
@@ -28,10 +29,11 @@ foreach ($Name in $ModuleId)
 }
 
 $command = Get-Command -Name 'mkdir'
+$definition = $command.Definition
 
 if ($command.CommandType -ne 'Function')
 {
-	throw "mkdir is not a function"
+	$definition = [System.Management.Automation.Runspaces.InitialSessionState].GetMethod('GetMkdirFunctionText', [System.Reflection.BindingFlags]'Static, NonPublic').Invoke($null, @())
 }
 
 $null = New-Item -Path $PublishDir -ItemType Directory
@@ -40,7 +42,7 @@ $null = New-Item -Path $PublishDir -ItemType Directory
 '# Licensed under the MIT License.',
 'function New-Directory',
 '{',
-$command.Definition,
+$definition,
 '}',
 'Export-ModuleMember -Function New-Directory' | Set-Content -LiteralPath "$PublishDir\$ModuleName.psm1"
 
